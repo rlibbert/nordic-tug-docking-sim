@@ -1,12 +1,12 @@
 # Prop Walk
 
-A physics-based docking simulator for a 32-foot single-screw Nordic Tug with a bow thruster. Bring her alongside a tight marina slip using a throttle, a rudder, and a bow thruster — no autopilot, no shortcuts.
+A physics-based docking simulator for a 34-foot single-screw Nordic Tug with a bow thruster. Bring her alongside a tight marina slip using a throttle, a rudder, and a bow thruster — no autopilot, no shortcuts.
 
 **[Play it live](https://rlibbert.github.io/nordic-tug-docking-sim/)**
 
 ## Why this exists
 
-Single-screw boat handling has a few quirks that don't show up in arcade boat games but matter a lot at the dock: the propeller doesn't just push straight, the rudder is useless without water moving past it, and a bow thruster runs out of authority the moment you're making any real way. This sim models those specifically, at the scale of a 32-foot hull, so the *behavior* is worth learning from even though the exact numbers are a reasonable approximation rather than a spec sheet.
+Single-screw boat handling has a few quirks that don't show up in arcade boat games but matter a lot at the dock: the propeller doesn't just push straight, the rudder is useless without water moving past it, and a bow thruster runs out of authority the moment you're making any real way. This sim models those specifically, at the scale of a 34-foot hull, so the *behavior* is worth learning from even though the exact numbers are a reasonable approximation rather than a spec sheet.
 
 ## The physics
 
