@@ -1,0 +1,938 @@
+<title>Prop Walk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#ece4d0;
+  --panel:#f5efdf;
+  --panel-2:#fbf8ee;
+  --border:#c9bd9d;
+  --water-a:#bcdbe0;
+  --water-b:#8bbdca;
+  --ink:#1c2420;
+  --ink-dim:#5b6b64;
+  --accent:#0f6b66;
+  --accent-soft:#0f6b6622;
+  --warn:#a8431d;
+  --warn-soft:#a8431d1f;
+  --good:#2f7d3a;
+  --good-soft:#2f7d3a1f;
+  --wood:#8a6240;
+  --wood-dark:#5f4028;
+  --hull:#1c3a5e;
+  --hull-trim:#f5efdf;
+  --shadow:0 1px 2px rgba(30,20,0,.08), 0 8px 24px rgba(30,20,0,.10);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#071620;
+    --panel:#0d2433;
+    --panel-2:#0a1c29;
+    --border:#1c3a4a;
+    --water-a:#0a3348;
+    --water-b:#124a63;
+    --ink:#e8f1f2;
+    --ink-dim:#7fa3af;
+    --accent:#3fd0c9;
+    --accent-soft:#3fd0c930;
+    --warn:#ff8a63;
+    --warn-soft:#ff8a6326;
+    --good:#7ee081;
+    --good-soft:#7ee08126;
+    --wood:#8a6240;
+    --wood-dark:#4a3220;
+    --hull:#3a5f8a;
+    --hull-trim:#e8f1f2;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#071620;
+  --panel:#0d2433;
+  --panel-2:#0a1c29;
+  --border:#1c3a4a;
+  --water-a:#0a3348;
+  --water-b:#124a63;
+  --ink:#e8f1f2;
+  --ink-dim:#7fa3af;
+  --accent:#3fd0c9;
+  --accent-soft:#3fd0c930;
+  --warn:#ff8a63;
+  --warn-soft:#ff8a6326;
+  --good:#7ee081;
+  --good-soft:#7ee08126;
+  --wood:#8a6240;
+  --wood-dark:#4a3220;
+  --hull:#3a5f8a;
+  --hull-trim:#e8f1f2;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.5);
+}
+
+*{box-sizing:border-box;}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:'IBM Plex Sans',ui-sans-serif,system-ui,sans-serif;
+  padding-inline:16px;
+  padding-block:18px 32px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:14px;
+}
+.wrap{width:100%;max-width:960px;display:flex;flex-direction:column;gap:14px;}
+
+header.plate{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:6px 16px;
+  border-bottom:1px solid var(--border);
+  padding-bottom:10px;
+}
+header.plate h1{
+  font-family:'Big Shoulders Display',ui-sans-serif,sans-serif;
+  font-weight:800;
+  font-size:clamp(28px,5vw,38px);
+  letter-spacing:.02em;
+  text-transform:uppercase;
+  margin:0;
+  text-wrap:balance;
+  color:var(--ink);
+}
+header.plate .sub{
+  font-size:12.5px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--ink-dim);
+  font-weight:500;
+}
+
+.stage{
+  display:grid;
+  grid-template-columns:1fr 260px;
+  gap:12px;
+}
+@media (max-width:640px){
+  .stage{grid-template-columns:1fr;}
+}
+
+.scene-frame{
+  position:relative;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--panel-2);
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+.scene-box{
+  position:relative;
+  width:100%;
+  aspect-ratio:3/2;
+}
+canvas{display:block;width:100%;height:100%;}
+
+.status-bar{
+  position:absolute;
+  left:0;right:0;bottom:0;
+  padding:8px 12px;
+  font-size:13px;
+  font-weight:500;
+  background:var(--panel-2);
+  border-top:1px solid var(--border);
+  color:var(--ink);
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-height:36px;
+}
+.status-bar .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:none;}
+.status-bar.warn{color:var(--warn);background:var(--warn-soft);}
+.status-bar.warn .dot{background:var(--warn);}
+.status-bar.good{color:var(--good);background:var(--good-soft);}
+.status-bar.good .dot{background:var(--good);}
+
+.panel{
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--panel);
+  box-shadow:var(--shadow);
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.readouts{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.stage .panel .readouts{grid-template-columns:1fr 1fr;}
+.stat{
+  background:var(--panel-2);
+  border:1px solid var(--border);
+  border-radius:7px;
+  padding:6px 9px;
+}
+.stat .lbl{
+  font-size:10px;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  color:var(--ink-dim);
+  font-weight:600;
+}
+.stat .val{
+  font-family:'IBM Plex Mono',ui-monospace,monospace;
+  font-variant-numeric:tabular-nums;
+  font-size:19px;
+  font-weight:500;
+  color:var(--accent);
+  line-height:1.25;
+}
+.stat .val small{font-size:11px;color:var(--ink-dim);font-weight:400;}
+
+.section-title{
+  font-size:10.5px;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  color:var(--ink-dim);
+  font-weight:600;
+  margin:0 0 -2px;
+}
+
+.control-row{display:flex;align-items:center;gap:8px;}
+.lever-track{
+  position:relative;
+  width:34px;height:118px;
+  background:var(--panel-2);
+  border:1px solid var(--border);
+  border-radius:6px;
+  flex:none;
+}
+.lever-track .mid{position:absolute;left:3px;right:3px;top:50%;height:1px;background:var(--border);}
+.lever-track .detent{position:absolute;left:50%;width:16px;height:2px;transform:translateX(-50%);background:var(--accent);opacity:.6;border-radius:1px;pointer-events:none;}
+.lever-thumb{
+  position:absolute;left:3px;right:3px;height:16px;
+  background:var(--accent);
+  border-radius:4px;
+  transform:translateY(-8px);
+  transition:top .05s linear;
+  box-shadow:0 1px 3px rgba(0,0,0,.25);
+}
+.lever-labels{display:flex;flex-direction:column;justify-content:space-between;height:118px;font-size:9.5px;color:var(--ink-dim);letter-spacing:.06em;text-transform:uppercase;font-weight:600;}
+.btn-col{display:flex;flex-direction:column;gap:6px;flex:1;}
+.btn{
+  font-family:'IBM Plex Sans',sans-serif;
+  font-size:12.5px;
+  font-weight:600;
+  letter-spacing:.03em;
+  padding:7px 8px;
+  border-radius:6px;
+  border:1px solid var(--border);
+  background:var(--panel-2);
+  color:var(--ink);
+  cursor:pointer;
+  user-select:none;
+  touch-action:none;
+  text-align:center;
+}
+.btn:hover{border-color:var(--accent);}
+.btn:active,.btn.held{background:var(--accent);color:var(--panel);border-color:var(--accent);}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+.btn.wide{flex:1;}
+.hstack{display:flex;gap:6px;}
+
+.thruster-row{display:flex;align-items:center;gap:8px;}
+.thruster-light{
+  flex:1;text-align:center;padding:9px 4px;border-radius:6px;
+  border:1px solid var(--border);background:var(--panel-2);
+  font-size:11px;font-weight:600;letter-spacing:.05em;color:var(--ink-dim);
+  cursor:pointer;user-select:none;touch-action:none;
+}
+.thruster-light.on{background:var(--accent);color:var(--panel);border-color:var(--accent);}
+
+select#difficulty{
+  font-family:'IBM Plex Sans',sans-serif;
+  font-size:12.5px;font-weight:500;
+  padding:6px 8px;border-radius:6px;border:1px solid var(--border);
+  background:var(--panel-2);color:var(--ink);width:100%;
+}
+select#difficulty:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+
+.restart-btn{
+  background:var(--accent);color:var(--panel);border-color:var(--accent);
+  font-size:13px;padding:9px;
+}
+
+details.info{
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--panel);
+  box-shadow:var(--shadow);
+  padding:10px 14px;
+}
+details.info summary{
+  cursor:pointer;font-weight:600;font-size:13px;letter-spacing:.02em;
+  color:var(--ink);list-style:revert;
+}
+details.info summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+details.info .body{
+  margin-top:8px;font-size:13px;line-height:1.55;color:var(--ink-dim);
+  max-width:65ch;
+}
+details.info .body b{color:var(--ink);font-weight:600;}
+details.info .body p{margin:0 0 8px;}
+details.info .body p:last-child{margin-bottom:0;}
+
+.keys{font-family:'IBM Plex Mono',monospace;font-size:11px;background:var(--panel-2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;}
+
+footer.credit{font-size:11px;color:var(--ink-dim);text-align:center;}
+</style>
+
+<div class="wrap">
+  <header class="plate">
+    <h1>Prop Walk</h1>
+    <div class="sub">Nordic Tug 32 &middot; single screw &middot; bow thruster</div>
+  </header>
+
+  <div class="stage">
+    <div class="scene-frame">
+      <div class="scene-box">
+        <canvas id="scene"></canvas>
+      </div>
+      <div class="status-bar" id="statusBar"><span class="dot"></span><span id="statusText">Underway &mdash; bring her alongside gently.</span></div>
+    </div>
+
+    <div class="panel">
+      <div class="readouts">
+        <div class="stat"><div class="lbl">Speed</div><div class="val" id="rSpeed">0.0<small> kn</small></div></div>
+        <div class="stat"><div class="lbl">Heading</div><div class="val" id="rHeading">000<small>&deg;</small></div></div>
+        <div class="stat"><div class="lbl">Range</div><div class="val" id="rRange">&mdash;<small> m</small></div></div>
+        <div class="stat"><div class="lbl">Attempt</div><div class="val" id="rAttempt">1</div></div>
+      </div>
+
+      <div>
+        <div class="section-title">Throttle</div>
+        <div class="control-row" style="margin-top:6px;">
+          <div class="lever-labels"><span>Fwd</span><span>0</span><span>Rev</span></div>
+          <div class="lever-track" id="leverTrack"><div class="mid"></div><div class="detent" style="top:42.5%"></div><div class="detent" style="top:57.5%"></div><div class="lever-thumb" id="leverThumb"></div></div>
+          <div class="btn-col">
+            <button class="btn" id="btnThrFwd" data-key="thrFwd">&#9650; Ahead</button>
+            <button class="btn" id="btnThrNeu">&#9679; Neutral</button>
+            <button class="btn" id="btnThrRev" data-key="thrRev">&#9660; Astern</button>
+          </div>
+        </div>
+        <div class="stat" style="margin-top:6px;"><div class="lbl">Throttle</div><div class="val" id="rThrottle">0<small>%</small></div></div>
+      </div>
+
+      <div>
+        <div class="section-title">Rudder</div>
+        <div class="hstack" style="margin-top:6px;">
+          <button class="btn wide" id="btnRudL" data-key="rudL">&#9664; Port</button>
+          <button class="btn" id="btnRudC">Ctr</button>
+          <button class="btn wide" id="btnRudR" data-key="rudR">Stbd &#9654;</button>
+        </div>
+        <div class="stat" style="margin-top:6px;"><div class="lbl">Rudder angle</div><div class="val" id="rRudder">0<small>&deg;</small></div></div>
+      </div>
+
+      <div>
+        <div class="section-title">Bow thruster</div>
+        <div class="thruster-row" style="margin-top:6px;">
+          <div class="thruster-light" id="btnThrP" data-key="thrusterP">&#9668; PORT</div>
+          <div class="thruster-light" id="btnThrCtr">OFF</div>
+          <div class="thruster-light" id="btnThrS" data-key="thrusterS">STBD &#9658;</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title">Conditions</div>
+        <select id="difficulty" style="margin-top:6px;">
+          <option value="calm">Calm &mdash; no wind</option>
+          <option value="breeze">Light breeze &mdash; 6 kt</option>
+          <option value="gusty">Gusty crosswind &mdash; 12 kt</option>
+        </select>
+      </div>
+
+      <button class="btn restart-btn" id="btnRestart">Reset approach (R)</button>
+      <div style="font-size:11px;color:var(--ink-dim);">Best dock time: <span id="rBest">&mdash;</span></div>
+    </div>
+  </div>
+
+  <details class="info">
+    <summary>How a single-screw tug handles</summary>
+    <div class="body">
+      <p><b>Throttle.</b> Like a single-lever control, the shift detents sit just off neutral (marked on the lever) &mdash; a quick push clicks the transmission into gear at idle speed before the throttle really opens up.</p>
+      <p><b>Prop walk.</b> This boat's right-hand (clockwise, viewed from astern) propeller doesn't just push straight &mdash; it also drags the stern sideways. In astern gear the stern walks to <b>port</b>, swinging the bow to starboard, hardest at low speed. A light touch of ahead throttle walks the stern the other way, more gently. Use short bursts to pivot the boat without gaining way.</p>
+      <p><b>Rudder.</b> The rudder only bites when water is moving past it &mdash; either the boat's own headway/sternway, or the wash from a burst of throttle. Dead in the water with the engine in neutral, the wheel does nothing.</p>
+      <p><b>Bow thruster.</b> Pushes the bow sideways independent of the rudder, but loses authority above roughly 2&ndash;3 knots as the hull's own speed overpowers it &mdash; it's a docking tool, not a steering one.</p>
+      <p>Controls: <span class="keys">W/S</span> or <span class="keys">&uarr;/&darr;</span> throttle, <span class="keys">A/D</span> or <span class="keys">&larr;/&rarr;</span> rudder, <span class="keys">Q/E</span> bow thruster (hold), <span class="keys">C</span> center rudder, <span class="keys">X</span> throttle to neutral, <span class="keys">R</span> reset. Touch controls work the same way &mdash; press and hold.</p>
+    </div>
+  </details>
+
+  <footer class="credit">A 32-foot hull, one propeller, and a bow thruster &mdash; physics only, no autopilot.</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+// ---------- World & physical constants ----------
+const WORLD_W=64.8, WORLD_H=43.2;
+const L=9.75, BEAM=3.35, IZZ=90000;
+const M_U=9500, M_V=14000;
+const THRUST_FWD_MAX=9000, THRUST_REV_MAX=6000;
+const ENGINE_TAU=1.1;
+const SURGE_LIN=250, SURGE_QUAD=400;
+const SWAY_LIN=500, SWAY_QUAD=1800;
+const YAW_DAMP_LIN=18000, YAW_DAMP_QUAD=40000;
+const THR_DETENT=0.15;
+const THR_RATE_SLOW=0.42, THR_RATE_FAST=1.8;
+const RUDDER_MAX=35*Math.PI/180;
+const RUDDER_TAU=0.4;
+const RUDDER_COEF=4200;
+const PROPWASH_FACTOR=3.2;
+const PROPWALK_FWD=2200, PROPWALK_REV=5200;
+const THRUSTER_MAX=1800, THRUSTER_ARM=4.2, THRUSTER_CUTOFF=2.5;
+const WIND_K_SURGE=6, WIND_K_SWAY=22, WIND_COE_OFFSET=1.2;
+const DOCK_SPEED_MS=0.18, DOCK_YAW_MAX=0.09, DOCK_HEAD_TOL=22*Math.PI/180, DOCK_HOLD_T=2.2;
+const DAMAGE_THRESH_MS=0.31;
+const MS_TO_KN=1.94384;
+
+const SLIP_X_MIN=30.8, SLIP_X_MAX=36.0, SLIP_Y_MIN=8.6, SLIP_Y_MAX=11.9;
+const SLIP_CX=(SLIP_X_MIN+SLIP_X_MAX)/2, SLIP_CY=10.2;
+
+const segments=[
+  {x1:13.4,y1:6,x2:51.4,y2:6,half:0.55},
+  {x1:29.4,y1:6,x2:29.4,y2:16,half:0.35},
+  {x1:37.4,y1:6,x2:37.4,y2:16,half:0.35},
+  {x1:45.4,y1:6,x2:45.4,y2:16,half:0.35},
+];
+const obstacles=[
+  {x:29.4,y:16,r:0.32},
+  {x:37.4,y:16,r:0.32},
+  {x:45.4,y:16,r:0.32},
+  {x:41.4,y:9.6,r:1.85,kind:"boat"},
+];
+
+const HULL_CIRCLES=[
+  {f:3.6, rad:0.85},
+  {f:1.2, rad:1.6},
+  {f:-1.4, rad:1.65},
+  {f:-4.0, rad:1.05},
+];
+
+// ---------- State ----------
+const boat={
+  x:0,y:0,heading:0,
+  u:0,v:0,r:0,
+  throttleTarget:0, throttleActual:0,
+  rudderTarget:0, rudderActual:0,
+  thrusterInput:0,
+};
+let attempt=1, attemptStart=0, dockTimer=0, docked=false, hardContacts=0, lastContactTime=-99, lastContactKn=0;
+let best=null;
+try{ const b=localStorage.getItem("propwalk_best"); if(b) best=parseFloat(b); }catch(e){}
+
+const wind={enabled:false, mode:"calm", baseSpeed:0, baseDir:0, speed:0, dir:0};
+
+const held=new Set();
+let particles=[];
+let simTime=0;
+
+// ---------- Helpers ----------
+function clamp(v,lo,hi){return v<lo?lo:v>hi?hi:v;}
+function norm(a){ while(a>Math.PI)a-=2*Math.PI; while(a<-Math.PI)a+=2*Math.PI; return a; }
+function rand(a,b){return a+Math.random()*(b-a);}
+
+function closestOnSegment(px,py,x1,y1,x2,y2){
+  const dx=x2-x1, dy=y2-y1;
+  const len2=dx*dx+dy*dy;
+  let t=len2>0 ? ((px-x1)*dx+(py-y1)*dy)/len2 : 0;
+  t=clamp(t,0,1);
+  return {x:x1+dx*t, y:y1+dy*t};
+}
+
+function applyDifficulty(){
+  const mode=document.getElementById("difficulty").value;
+  wind.mode=mode;
+  if(mode==="calm"){ wind.enabled=false; wind.baseSpeed=0; }
+  else if(mode==="breeze"){ wind.enabled=true; wind.baseSpeed=3.1; wind.baseDir=rand(0,Math.PI*2); }
+  else { wind.enabled=true; wind.baseSpeed=6.2; wind.baseDir=rand(0,Math.PI*2); }
+}
+
+function resetAttempt(bump){
+  if(bump) attempt++;
+  boat.x=rand(21.4,45.4); boat.y=rand(27,35);
+  boat.heading=norm(rand(-100,100)*Math.PI/180);
+  boat.u=0; boat.v=0; boat.r=0;
+  boat.throttleTarget=0; boat.throttleActual=0;
+  boat.rudderTarget=0; boat.rudderActual=0;
+  boat.thrusterInput=0;
+  dockTimer=0; docked=false; hardContacts=0; lastContactTime=-99;
+  attemptStart=simTime;
+  particles=[];
+  document.getElementById("rAttempt").textContent=attempt;
+  setStatus("Underway \u2014 bring her alongside gently.","info");
+}
+
+// ---------- Input ----------
+const keyMap={
+  w:"thrFwd", arrowup:"thrFwd",
+  s:"thrRev", arrowdown:"thrRev",
+  a:"rudL", arrowleft:"rudL",
+  d:"rudR", arrowright:"rudR",
+  q:"thrusterP", e:"thrusterS",
+};
+window.addEventListener("keydown",(e)=>{
+  const k=e.key.toLowerCase();
+  if(keyMap[k]){ held.add(keyMap[k]); e.preventDefault(); }
+  if(k==="c"){ boat.rudderTarget=0; }
+  if(k==="x"){ boat.throttleTarget=0; }
+  if(k==="r"){ resetAttempt(true); }
+});
+window.addEventListener("keyup",(e)=>{
+  const k=e.key.toLowerCase();
+  if(keyMap[k]){ held.delete(keyMap[k]); e.preventDefault(); }
+});
+window.addEventListener("blur",()=>held.clear());
+
+function wireHold(el,key){
+  if(!el) return;
+  const on=(ev)=>{ held.add(key); ev.preventDefault(); };
+  const off=()=>held.delete(key);
+  el.addEventListener("pointerdown",on);
+  el.addEventListener("pointerup",off);
+  el.addEventListener("pointerleave",off);
+  el.addEventListener("pointercancel",off);
+}
+document.addEventListener("DOMContentLoaded",()=>{
+  wireHold(document.getElementById("btnThrFwd"),"thrFwd");
+  wireHold(document.getElementById("btnThrRev"),"thrRev");
+  wireHold(document.getElementById("btnRudL"),"rudL");
+  wireHold(document.getElementById("btnRudR"),"rudR");
+  wireHold(document.getElementById("btnThrP"),"thrusterP");
+  wireHold(document.getElementById("btnThrS"),"thrusterS");
+  document.getElementById("btnThrNeu").addEventListener("click",()=>boat.throttleTarget=0);
+  document.getElementById("btnRudC").addEventListener("click",()=>boat.rudderTarget=0);
+  document.getElementById("btnRestart").addEventListener("click",()=>resetAttempt(true));
+  document.getElementById("difficulty").addEventListener("change",applyDifficulty);
+  applyDifficulty();
+  resetAttempt(false);
+  fitCanvas();
+  requestAnimationFrame(loop);
+});
+
+function updateInputs(dt){
+  const rudRate=2.0*RUDDER_MAX;
+  const fwdHeld=held.has("thrFwd"), revHeld=held.has("thrRev");
+  if(fwdHeld){
+    const rate=boat.throttleTarget<THR_DETENT-1e-6 ? THR_RATE_FAST : THR_RATE_SLOW;
+    boat.throttleTarget=clamp(boat.throttleTarget+rate*dt,-1,1);
+  }
+  if(revHeld){
+    const rate=boat.throttleTarget>-THR_DETENT+1e-6 ? THR_RATE_FAST : THR_RATE_SLOW;
+    boat.throttleTarget=clamp(boat.throttleTarget-rate*dt,-1,1);
+  }
+  if(!fwdHeld&&!revHeld&&Math.abs(boat.throttleTarget)<THR_DETENT&&boat.throttleTarget!==0){
+    const pull=Math.sign(boat.throttleTarget)*Math.min(Math.abs(boat.throttleTarget),THR_RATE_FAST*0.6*dt);
+    boat.throttleTarget-=pull;
+  }
+  if(held.has("rudL")) boat.rudderTarget=clamp(boat.rudderTarget-rudRate*dt,-RUDDER_MAX,RUDDER_MAX);
+  if(held.has("rudR")) boat.rudderTarget=clamp(boat.rudderTarget+rudRate*dt,-RUDDER_MAX,RUDDER_MAX);
+  let ti=0;
+  if(held.has("thrusterP")) ti-=1;
+  if(held.has("thrusterS")) ti+=1;
+  boat.thrusterInput=ti;
+}
+
+// ---------- Physics ----------
+function stepPhysics(dt){
+  boat.throttleActual += (boat.throttleTarget-boat.throttleActual)*Math.min(1,dt/ENGINE_TAU);
+  boat.rudderActual += (boat.rudderTarget-boat.rudderActual)*Math.min(1,dt/RUDDER_TAU);
+
+  const throttle=boat.throttleActual;
+  const thrust= throttle>=0 ? throttle*THRUST_FWD_MAX : throttle*THRUST_REV_MAX;
+  const speed=Math.hypot(boat.u,boat.v);
+
+  let Fsurge=thrust - (SURGE_LIN*boat.u + SURGE_QUAD*boat.u*Math.abs(boat.u));
+
+  const thrusterEff=Math.max(0,1-speed/THRUSTER_CUTOFF);
+  const Fthr=boat.thrusterInput*THRUSTER_MAX*thrusterEff;
+  let Fsway=Fthr - (SWAY_LIN*boat.v + SWAY_QUAD*boat.v*Math.abs(boat.v));
+
+  let torque=0;
+  const washFlow=PROPWASH_FACTOR*Math.max(throttle,0);
+  const flow=boat.u+washFlow;
+  torque += RUDDER_COEF*boat.rudderActual*flow;
+  torque += Fthr*THRUSTER_ARM;
+  torque += throttle<0 ? (-throttle)*PROPWALK_REV : -throttle*PROPWALK_FWD;
+  torque -= YAW_DAMP_LIN*boat.r + YAW_DAMP_QUAD*boat.r*Math.abs(boat.r);
+
+  if(wind.enabled){
+    const toward=wind.dir+Math.PI;
+    const wx=wind.speed*Math.sin(toward), wy=-wind.speed*Math.cos(toward);
+    const vx=boat.u*Math.sin(boat.heading)+boat.v*Math.cos(boat.heading);
+    const vy=-boat.u*Math.cos(boat.heading)+boat.v*Math.sin(boat.heading);
+    const ax=wx-vx, ay=wy-vy;
+    const appF=ax*Math.sin(boat.heading)-ay*Math.cos(boat.heading);
+    const appR=ax*Math.cos(boat.heading)+ay*Math.sin(boat.heading);
+    const Fw_s=WIND_K_SURGE*appF*Math.abs(appF);
+    const Fw_w=WIND_K_SWAY*appR*Math.abs(appR);
+    Fsurge+=Fw_s; Fsway+=Fw_w;
+    torque+=Fw_w*WIND_COE_OFFSET;
+  }
+
+  const u_dot=Fsurge/M_U + boat.v*boat.r;
+  const v_dot=Fsway/M_V - boat.u*boat.r;
+  const r_dot=torque/IZZ;
+
+  boat.u+=u_dot*dt; boat.v+=v_dot*dt; boat.r+=r_dot*dt;
+
+  const vx=boat.u*Math.sin(boat.heading)+boat.v*Math.cos(boat.heading);
+  const vy=-boat.u*Math.cos(boat.heading)+boat.v*Math.sin(boat.heading);
+  boat.x+=vx*dt; boat.y+=vy*dt; boat.heading=norm(boat.heading+boat.r*dt);
+
+  resolveCollisions();
+
+  boat.x=clamp(boat.x,1.2,WORLD_W-1.2);
+  boat.y=clamp(boat.y,1.2,WORLD_H-1.2);
+
+  if(Math.abs(throttle)>0.12 && Math.random()<0.5){
+    const sx=boat.x-4.6*Math.sin(boat.heading), sy=boat.y+4.6*Math.cos(boat.heading);
+    particles.push({x:sx+rand(-0.3,0.3),y:sy+rand(-0.3,0.3),life:1,dx:rand(-0.4,0.4),dy:rand(-0.4,0.4)});
+  }
+  if(Math.abs(boat.thrusterInput)>0.1 && Math.random()<0.6){
+    const bx=boat.x+4.3*Math.sin(boat.heading), by=boat.y-4.3*Math.cos(boat.heading);
+    const side=boat.thrusterInput>0?-1:1;
+    particles.push({x:bx+side*0.5*Math.cos(boat.heading),y:by+side*0.5*Math.sin(boat.heading),life:0.7,dx:rand(-0.3,0.3),dy:rand(-0.3,0.3)});
+  }
+  particles.forEach(p=>{p.life-=dt*0.9; p.x+=p.dx*dt; p.y+=p.dy*dt;});
+  particles=particles.filter(p=>p.life>0).slice(-60);
+}
+
+function velocityAtNormal(nx,ny){
+  const vx=boat.u*Math.sin(boat.heading)+boat.v*Math.cos(boat.heading);
+  const vy=-boat.u*Math.cos(boat.heading)+boat.v*Math.sin(boat.heading);
+  return {vx,vy,vn:vx*nx+vy*ny};
+}
+function applyNormalZero(nx,ny){
+  const vx=boat.u*Math.sin(boat.heading)+boat.v*Math.cos(boat.heading);
+  const vy=-boat.u*Math.cos(boat.heading)+boat.v*Math.sin(boat.heading);
+  const vn=vx*nx+vy*ny;
+  const nvx=vx-vn*nx, nvy=vy-vn*ny;
+  boat.u=nvx*Math.sin(boat.heading)-nvy*Math.cos(boat.heading);
+  boat.v=nvx*Math.cos(boat.heading)+nvy*Math.sin(boat.heading);
+}
+
+function resolveCollisions(){
+  for(const c of HULL_CIRCLES){
+    const cx=boat.x+c.f*Math.sin(boat.heading);
+    const cy=boat.y-c.f*Math.cos(boat.heading);
+
+    for(const ob of obstacles){
+      const dx=cx-ob.x, dy=cy-ob.y;
+      const dist=Math.hypot(dx,dy);
+      const minD=c.rad+ob.r;
+      if(dist<minD && dist>0.0001){
+        const nx=dx/dist, ny=dy/dist;
+        const overlap=minD-dist;
+        boat.x+=nx*overlap; boat.y+=ny*overlap;
+        const {vn}=velocityAtNormal(-nx,-ny);
+        if(vn>0){
+          registerContact(vn);
+          applyNormalZero(-nx,-ny);
+          boat.r*=0.6;
+        }
+      }
+    }
+    for(const s of segments){
+      const p=closestOnSegment(cx,cy,s.x1,s.y1,s.x2,s.y2);
+      const dx=cx-p.x, dy=cy-p.y;
+      const dist=Math.hypot(dx,dy);
+      const minD=c.rad+s.half;
+      if(dist<minD && dist>0.0001){
+        const nx=dx/dist, ny=dy/dist;
+        const overlap=minD-dist;
+        boat.x+=nx*overlap; boat.y+=ny*overlap;
+        const {vn}=velocityAtNormal(-nx,-ny);
+        if(vn>0){
+          registerContact(vn);
+          applyNormalZero(-nx,-ny);
+          boat.r*=0.6;
+        }
+      }
+    }
+  }
+}
+
+function registerContact(vn){
+  const kn=vn*MS_TO_KN;
+  if(vn>DAMAGE_THRESH_MS){
+    hardContacts++; lastContactTime=simTime; lastContactKn=kn;
+  }
+}
+
+// ---------- Docking check ----------
+function checkDocking(dt){
+  const speed=Math.hypot(boat.u,boat.v);
+  const inBox=boat.x>SLIP_X_MIN&&boat.x<SLIP_X_MAX&&boat.y>SLIP_Y_MIN&&boat.y<SLIP_Y_MAX;
+  const headOk=Math.abs(norm(boat.heading))<DOCK_HEAD_TOL;
+  const stillOk=speed<DOCK_SPEED_MS&&Math.abs(boat.r)<DOCK_YAW_MAX;
+  if(inBox&&headOk&&stillOk){
+    dockTimer+=dt;
+    if(dockTimer>=DOCK_HOLD_T&&!docked){
+      docked=true;
+      const elapsed=simTime-attemptStart;
+      if(best===null||elapsed<best){
+        best=elapsed;
+        try{ localStorage.setItem("propwalk_best",String(best)); }catch(e){}
+      }
+      setStatus("Well docked, in "+elapsed.toFixed(1)+"s"+(hardContacts?(" \u2014 "+hardContacts+" hard contact"+(hardContacts>1?"s":"")):" \u2014 clean approach")+".","good");
+    }
+  } else {
+    dockTimer=Math.max(0,dockTimer-dt*2);
+  }
+}
+
+function setStatus(text,tone){
+  const bar=document.getElementById("statusBar");
+  document.getElementById("statusText").textContent=text;
+  bar.className="status-bar"+(tone==="warn"?" warn":tone==="good"?" good":"");
+}
+
+// ---------- Render ----------
+const canvas=document.getElementById("scene");
+const ctx=canvas.getContext("2d");
+let scale=1, dpr=1;
+
+function fitCanvas(){
+  const box=canvas.parentElement.getBoundingClientRect();
+  dpr=Math.min(window.devicePixelRatio||1,2);
+  canvas.width=Math.round(box.width*dpr);
+  canvas.height=Math.round(box.height*dpr);
+  scale=box.width/WORLD_W;
+}
+window.addEventListener("resize",fitCanvas);
+
+function css(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+function W(x,y){ return {x:x*scale, y:y*scale}; }
+
+function drawSegRect(s,color){
+  const dx=s.x2-s.x1, dy=s.y2-s.y1;
+  const len=Math.hypot(dx,dy);
+  const nx=-dy/len, ny=dx/len;
+  const p1=W(s.x1+nx*s.half,s.y1+ny*s.half);
+  const p2=W(s.x2+nx*s.half,s.y2+ny*s.half);
+  const p3=W(s.x2-nx*s.half,s.y2-ny*s.half);
+  const p4=W(s.x1-nx*s.half,s.y1-ny*s.half);
+  ctx.fillStyle=color;
+  ctx.beginPath();
+  ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.lineTo(p3.x,p3.y); ctx.lineTo(p4.x,p4.y);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle=css("--wood-dark"); ctx.lineWidth=1; ctx.stroke();
+}
+
+function drawScene(){
+  const w=WORLD_W*scale, h=WORLD_H*scale;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  const grad=ctx.createLinearGradient(0,0,0,h);
+  grad.addColorStop(0,css("--water-b"));
+  grad.addColorStop(1,css("--water-a"));
+  ctx.fillStyle=grad;
+  ctx.fillRect(0,0,w,h);
+
+  ctx.strokeStyle="rgba(255,255,255,0.08)";
+  ctx.lineWidth=1;
+  for(let i=0;i<7;i++){
+    const yy=(i*0.14+ (simTime*0.006)%0.14)*h;
+    ctx.beginPath();
+    ctx.moveTo(0,yy);
+    for(let x=0;x<=w;x+=24) ctx.lineTo(x,yy+Math.sin(x*0.02+i)*3);
+    ctx.stroke();
+  }
+
+  // slip target
+  const bx1=W(SLIP_X_MIN,SLIP_Y_MIN), bx2=W(SLIP_X_MAX,SLIP_Y_MAX);
+  ctx.save();
+  ctx.setLineDash([6,5]);
+  ctx.strokeStyle=docked?css("--good"):css("--accent");
+  ctx.lineWidth=2;
+  ctx.strokeRect(bx1.x,bx1.y,bx2.x-bx1.x,bx2.y-bx1.y);
+  ctx.restore();
+
+  // dock structure
+  segments.forEach(s=>drawSegRect(s,css("--wood")));
+  obstacles.forEach(ob=>{
+    const p=W(ob.x,ob.y);
+    if(ob.kind==="boat"){
+      ctx.fillStyle=css("--ink-dim");
+      ctx.globalAlpha=0.55;
+      ctx.beginPath();
+      ctx.ellipse(p.x,p.y,ob.r*scale*0.55,ob.r*scale,0,0,Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha=1;
+    } else {
+      ctx.fillStyle=css("--wood-dark");
+      ctx.beginPath(); ctx.arc(p.x,p.y,ob.r*scale,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle=css("--wood"); ctx.lineWidth=1.5; ctx.stroke();
+    }
+  });
+
+  // particles (wash)
+  particles.forEach(p=>{
+    const pp=W(p.x,p.y);
+    ctx.fillStyle="rgba(255,255,255,"+(0.35*p.life)+")";
+    ctx.beginPath(); ctx.arc(pp.x,pp.y,3*scale*0.1+2,0,Math.PI*2); ctx.fill();
+  });
+
+  drawBoat();
+
+  // wind indicator
+  if(wind.enabled){
+    const cx=w-42, cy=42;
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.fillStyle="rgba(128,128,128,0.15)";
+    ctx.beginPath(); ctx.arc(0,0,26,0,Math.PI*2); ctx.fill();
+    ctx.rotate(wind.dir+Math.PI);
+    ctx.strokeStyle=css("--warn"); ctx.lineWidth=2.5; ctx.lineCap="round";
+    ctx.beginPath(); ctx.moveTo(0,14); ctx.lineTo(0,-14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,-14); ctx.lineTo(-5,-6); ctx.moveTo(0,-14); ctx.lineTo(5,-6); ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle=css("--ink-dim");
+    ctx.font="10px 'IBM Plex Mono',monospace";
+    ctx.textAlign="center";
+    ctx.fillText((wind.speed*MS_TO_KN).toFixed(0)+" kt",cx,cy+40);
+  }
+
+  // scale bar
+  ctx.strokeStyle=css("--ink-dim"); ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(14,h-14); ctx.lineTo(14+10*scale,h-14); ctx.stroke();
+  ctx.fillStyle=css("--ink-dim"); ctx.font="10px 'IBM Plex Mono',monospace"; ctx.textAlign="left";
+  ctx.fillText("10 m",14,h-20);
+}
+
+function drawBoat(){
+  const p=W(boat.x,boat.y);
+  ctx.save();
+  ctx.translate(p.x,p.y);
+  ctx.rotate(boat.heading);
+  const s=scale;
+
+  const hull=[
+    [0,-1.05],[1.55,-1.45,"stbdbow"],[1.675,0.5],[1.55,3.2],[1.3,4.7],
+    [-1.3,4.7],[-1.55,3.2],[-1.675,0.5],[-1.55,-1.45],[0,-1.05]
+  ];
+  function pt(r,f){ return {x:r*s, y:-f*s}; }
+
+  ctx.beginPath();
+  const bowTip=pt(0,4.85);
+  ctx.moveTo(bowTip.x,bowTip.y);
+  const outline=[
+    [1.55,3.6],[1.675,0.5],[1.55,-3.2],[1.3,-4.7],
+    [-1.3,-4.7],[-1.55,-3.2],[-1.675,0.5],[-1.55,3.6]
+  ];
+  outline.forEach(o=>{ const q=pt(o[0],o[1]); ctx.lineTo(q.x,q.y); });
+  ctx.closePath();
+  ctx.fillStyle=css("--hull");
+  ctx.fill();
+  ctx.strokeStyle="rgba(0,0,0,0.25)"; ctx.lineWidth=1; ctx.stroke();
+
+  // wheelhouse
+  ctx.fillStyle=css("--hull-trim");
+  const wh1=pt(-1.05,2.3), wh2=pt(1.05,-0.4);
+  ctx.beginPath();
+  ctx.roundRect ? ctx.roundRect(Math.min(wh1.x,wh2.x),Math.min(wh1.y,wh2.y),Math.abs(wh2.x-wh1.x),Math.abs(wh2.y-wh1.y),3*s*0.1) : ctx.rect(Math.min(wh1.x,wh2.x),Math.min(wh1.y,wh2.y),Math.abs(wh2.x-wh1.x),Math.abs(wh2.y-wh1.y));
+  ctx.fill();
+  ctx.strokeStyle="rgba(0,0,0,0.2)"; ctx.stroke();
+
+  // mast dot
+  const mast=pt(0,0.9);
+  ctx.fillStyle=css("--ink-dim");
+  ctx.beginPath(); ctx.arc(mast.x,mast.y,1.5*s*0.1+1,0,Math.PI*2); ctx.fill();
+
+  // bow thruster tunnel
+  const tun=pt(0,3.9);
+  ctx.strokeStyle="rgba(0,0,0,0.35)"; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(tun.x-1.15*s,tun.y); ctx.lineTo(tun.x+1.15*s,tun.y); ctx.stroke();
+
+  // centerline / rudder indicator at stern
+  const sternBase=pt(0,-4.7);
+  const rudEnd=pt(Math.sin(boat.rudderActual)*1.3, -4.7-Math.cos(boat.rudderActual)*1.3);
+  ctx.strokeStyle=css("--warn"); ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(sternBase.x,sternBase.y); ctx.lineTo(rudEnd.x,rudEnd.y); ctx.stroke();
+
+  ctx.restore();
+}
+
+// ---------- HUD ----------
+function updateHud(){
+  const speedKn=Math.hypot(boat.u,boat.v)*MS_TO_KN;
+  document.getElementById("rSpeed").innerHTML=speedKn.toFixed(1)+"<small> kn</small>";
+  const hdg=Math.round(((boat.heading*180/Math.PI)+360)%360);
+  document.getElementById("rHeading").innerHTML=String(hdg).padStart(3,"0")+"<small>&deg;</small>";
+  const range=Math.hypot(boat.x-SLIP_CX,boat.y-SLIP_CY);
+  document.getElementById("rRange").innerHTML=range.toFixed(0)+"<small> m</small>";
+  document.getElementById("rThrottle").innerHTML=Math.round(boat.throttleActual*100)+"<small>%</small>";
+  document.getElementById("rRudder").innerHTML=Math.round(boat.rudderActual*180/Math.PI)+"<small>&deg;</small>";
+  document.getElementById("rBest").textContent=best===null?"\u2014":best.toFixed(1)+"s";
+
+  const thumb=document.getElementById("leverThumb");
+  const frac=clamp(boat.throttleActual,-1,1);
+  thumb.style.top=((0.5-(frac*0.5))*100)+"%";
+  thumb.style.transform="translateY(-8px)";
+
+  document.getElementById("btnThrP").classList.toggle("on",boat.thrusterInput<-0.05);
+  document.getElementById("btnThrS").classList.toggle("on",boat.thrusterInput>0.05);
+
+  if(simTime-lastContactTime<2.2){
+    setStatus("Hard contact ("+lastContactKn.toFixed(1)+" kn) \u2014 ease off next time.","warn");
+  } else if(docked){
+    // keep success message until reset
+  } else if(dockTimer>0.25){
+    setStatus("Holding position\u2026 "+dockTimer.toFixed(1)+"s / "+DOCK_HOLD_T+"s","info");
+  } else if(simTime-attemptStart>1){
+    setStatus("Underway \u2014 bring her alongside gently.","info");
+  }
+}
+
+// ---------- Loop ----------
+let lastT=null;
+function loop(t){
+  if(lastT===null) lastT=t;
+  let dt=(t-lastT)/1000;
+  lastT=t;
+  dt=clamp(dt,0,0.05);
+  simTime+=dt;
+
+  if(wind.enabled){
+    if(wind.mode==="gusty"){
+      wind.dir=wind.baseDir+Math.sin(simTime*0.08)*0.35;
+      wind.speed=Math.max(0,wind.baseSpeed+Math.sin(simTime*0.2)*2.5+Math.sin(simTime*0.37+1)*1.1);
+    } else {
+      wind.dir=wind.baseDir;
+      wind.speed=wind.baseSpeed;
+    }
+  }
+
+  updateInputs(dt);
+  if(!docked || true){ stepPhysics(dt); }
+  checkDocking(dt);
+  updateHud();
+  drawScene();
+
+  requestAnimationFrame(loop);
+}
+
+// ---------- Hot reload state ----------
+if(window.claude&&window.claude.hot){
+  window.claude.hot.snapshot(()=>({boat:{...boat},attempt,hardContacts,docked,dockTimer,attemptStart,simTime}));
+}
+
+})();
+</script>
