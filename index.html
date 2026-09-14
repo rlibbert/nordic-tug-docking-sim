@@ -294,7 +294,7 @@ footer.credit{font-size:11px;color:var(--ink-dim);text-align:center;}
 <div class="wrap">
   <header class="plate">
     <h1>Prop Walk</h1>
-    <div class="sub">Nordic Tug 34 &middot; single screw &middot; bow thruster</div>
+    <div class="sub" id="vesselSub">Nordic Tug 34 &middot; single screw &middot; bow thruster</div>
   </header>
 
   <div class="stage">
@@ -311,6 +311,14 @@ footer.credit{font-size:11px;color:var(--ink-dim);text-align:center;}
         <div class="stat"><div class="lbl">Heading</div><div class="val" id="rHeading">000<small>&deg;</small></div></div>
         <div class="stat"><div class="lbl">Range</div><div class="val" id="rRange">&mdash;<small> m</small></div></div>
         <div class="stat"><div class="lbl">Attempt</div><div class="val" id="rAttempt">1</div></div>
+      </div>
+
+      <div>
+        <div class="section-title">Vessel</div>
+        <select id="vessel" style="margin-top:6px;">
+          <option value="tug34">Nordic Tug 34 &mdash; bow thruster</option>
+          <option value="tug44">Nordic Tug 44 &mdash; bow &amp; stern thruster</option>
+        </select>
       </div>
 
       <div>
@@ -346,6 +354,15 @@ footer.credit{font-size:11px;color:var(--ink-dim);text-align:center;}
         </div>
       </div>
 
+      <div id="sternSection" hidden>
+        <div class="section-title">Stern thruster</div>
+        <div class="thruster-row" style="margin-top:6px;">
+          <div class="thruster-light" id="btnSternP" data-key="sternP">&#9668; PORT</div>
+          <div class="thruster-light" id="btnSternCtr">OFF</div>
+          <div class="thruster-light" id="btnSternS" data-key="sternS">STBD &#9658;</div>
+        </div>
+      </div>
+
       <div>
         <div class="section-title">Conditions</div>
         <select id="difficulty" style="margin-top:6px;">
@@ -366,62 +383,101 @@ footer.credit{font-size:11px;color:var(--ink-dim);text-align:center;}
       <p><b>Throttle.</b> Like a single-lever control, the shift detents sit just off neutral (marked on the lever) &mdash; a quick push clicks the transmission into gear at idle speed before the throttle really opens up.</p>
       <p><b>Prop walk.</b> This boat's right-hand (clockwise, viewed from astern) propeller doesn't just push straight &mdash; it also drags the stern sideways. In astern gear the stern walks to <b>port</b>, swinging the bow to starboard, hardest at low speed. A light touch of ahead throttle walks the stern the other way, more gently. Use short bursts to pivot the boat without gaining way.</p>
       <p><b>Rudder.</b> The rudder only bites when water is moving past it &mdash; either the boat's own headway/sternway, or the wash from a burst of throttle. Dead in the water with the engine in neutral, the wheel does nothing.</p>
-      <p><b>Bow thruster.</b> Pushes the bow sideways independent of the rudder, but loses authority above roughly 2&ndash;3 knots as the hull's own speed overpowers it &mdash; it's a docking tool, not a steering one.</p>
-      <p>Controls: <span class="keys">W/S</span> or <span class="keys">&uarr;/&darr;</span> throttle, <span class="keys">A/D</span> or <span class="keys">&larr;/&rarr;</span> rudder, <span class="keys">Q/E</span> bow thruster (hold), <span class="keys">C</span> center rudder, <span class="keys">X</span> throttle to neutral, <span class="keys">R</span> reset. Touch controls work the same way &mdash; press and hold.</p>
+      <p><b>Bow thruster.</b> Pushes the bow sideways independent of the rudder, but loses authority above roughly 2&ndash;3 knots as the hull's own speed overpowers it &mdash; it's a docking tool, not a steering one. The Tug 44 adds a stern thruster too: push the bow and stern opposite ways and she'll pivot almost in place, no headway gained.</p>
+      <p>Controls: <span class="keys">W/S</span> or <span class="keys">&uarr;/&darr;</span> throttle, <span class="keys">A/D</span> or <span class="keys">&larr;/&rarr;</span> rudder, <span class="keys">Q/E</span> bow thruster (hold), <span class="keys">Z/C</span> stern thruster (hold, Tug 44 only), <span class="keys">Space</span> center rudder, <span class="keys">X</span> throttle to neutral, <span class="keys">R</span> reset. Touch controls work the same way &mdash; press and hold.</p>
     </div>
   </details>
 
-  <footer class="credit">A 34-foot hull, one propeller, and a bow thruster &mdash; physics only, no autopilot.</footer>
+  <footer class="credit" id="footerLine">A 34-foot hull, one propeller, and a bow thruster &mdash; physics only, no autopilot.</footer>
 </div>
 
 <script>
 (function(){
 "use strict";
 
-// ---------- World & physical constants ----------
-const WORLD_W=64.8, WORLD_H=43.2;
-const L=9.75, BEAM=3.35, IZZ=90000;
-const M_U=9500, M_V=14000;
-const THRUST_FWD_MAX=9000, THRUST_REV_MAX=6000;
-const ENGINE_TAU=1.1;
-const SURGE_LIN=250, SURGE_QUAD=400;
-const SWAY_LIN=500, SWAY_QUAD=1800;
-const YAW_DAMP_LIN=18000, YAW_DAMP_QUAD=40000;
-const THR_DETENT=0.15;
-const THR_RATE_SLOW=0.42, THR_RATE_FAST=1.8;
-const RUDDER_MAX=35*Math.PI/180;
-const RUDDER_TAU=0.4;
-const RUDDER_COEF=4200;
-const PROPWASH_FACTOR=3.2;
-const PROPWALK_FWD=2200, PROPWALK_REV=5200;
-const THRUSTER_MAX=1800, THRUSTER_ARM=4.2, THRUSTER_CUTOFF=2.5;
-const WIND_K_SURGE=6, WIND_K_SWAY=22, WIND_COE_OFFSET=1.2;
-const DOCK_SPEED_MS=0.18, DOCK_YAW_MAX=0.09, DOCK_HEAD_TOL=22*Math.PI/180, DOCK_HOLD_T=2.2;
-const DAMAGE_THRESH_MS=0.31;
-const MS_TO_KN=1.94384;
+// ---------- Vessels ----------
+// Base geometry/hull authored for the Tug 34 (scaleK 1); the Tug 44 reuses it
+// scaled up uniformly by hull length, so the marina always fits the boat.
+const VESSELS={
+  tug34:{
+    name:"Nordic Tug 34", feet:34, hasStern:false, scaleK:1,
+    IZZ:90000, M_U:9500, M_V:14000,
+    THRUST_FWD_MAX:9000, THRUST_REV_MAX:6000, ENGINE_TAU:1.1,
+    SURGE_LIN:250, SURGE_QUAD:400, SWAY_LIN:500, SWAY_QUAD:1800,
+    YAW_DAMP_LIN:18000, YAW_DAMP_QUAD:40000,
+    RUDDER_COEF:4200, PROPWASH_FACTOR:3.2, PROPWALK_FWD:2200, PROPWALK_REV:5200,
+    BOW_MAX:1800, BOW_ARM:4.2, THRUSTER_CUTOFF:2.5,
+    STERN_MAX:0, STERN_ARM:0,
+    WIND_K_SURGE:6, WIND_K_SWAY:22, WIND_COE_OFFSET:1.2,
+  },
+  tug44:{
+    name:"Nordic Tug 44", feet:44, hasStern:true, scaleK:13.5/9.75,
+    IZZ:385000, M_U:21300, M_V:31300,
+    THRUST_FWD_MAX:17500, THRUST_REV_MAX:11400, ENGINE_TAU:1.3,
+    SURGE_LIN:475, SURGE_QUAD:760, SWAY_LIN:950, SWAY_QUAD:3420,
+    YAW_DAMP_LIN:48000, YAW_DAMP_QUAD:106000,
+    RUDDER_COEF:11000, PROPWASH_FACTOR:3.2, PROPWALK_FWD:4000, PROPWALK_REV:9300,
+    BOW_MAX:3000, BOW_ARM:5.8, THRUSTER_CUTOFF:2.8,
+    STERN_MAX:2600, STERN_ARM:5.6,
+    WIND_K_SURGE:11, WIND_K_SWAY:42, WIND_COE_OFFSET:1.65,
+  },
+};
 
-const SLIP_X_MIN=30.8, SLIP_X_MAX=36.0, SLIP_Y_MIN=8.6, SLIP_Y_MAX=11.9;
-const SLIP_CX=(SLIP_X_MIN+SLIP_X_MAX)/2, SLIP_CY=10.2;
-
-const segments=[
-  {x1:13.4,y1:6,x2:51.4,y2:6,half:0.55},
-  {x1:29.4,y1:6,x2:29.4,y2:16,half:0.35},
-  {x1:37.4,y1:6,x2:37.4,y2:16,half:0.35},
-  {x1:45.4,y1:6,x2:45.4,y2:16,half:0.35},
-];
-const obstacles=[
-  {x:29.4,y:16,r:0.32},
-  {x:37.4,y:16,r:0.32},
-  {x:45.4,y:16,r:0.32},
-  {x:41.4,y:9.6,r:1.85,kind:"boat"},
-];
-
-const HULL_CIRCLES=[
+const BASE_GEO={
+  WORLD_W:64.8, WORLD_H:43.2,
+  segments:[
+    {x1:13.4,y1:6,x2:51.4,y2:6,half:0.55},
+    {x1:29.4,y1:6,x2:29.4,y2:16,half:0.35},
+    {x1:37.4,y1:6,x2:37.4,y2:16,half:0.35},
+    {x1:45.4,y1:6,x2:45.4,y2:16,half:0.35},
+  ],
+  obstacles:[
+    {x:29.4,y:16,r:0.32},
+    {x:37.4,y:16,r:0.32},
+    {x:45.4,y:16,r:0.32},
+    {x:41.4,y:9.6,r:1.85,kind:"boat"},
+  ],
+  slip:{xMin:30.8,xMax:36.0,yMin:8.6,yMax:11.9,cy:10.2},
+  spawn:{xMin:21.4,xMax:45.4,yMin:27,yMax:35},
+};
+const BASE_HULL_CIRCLES=[
   {f:3.6, rad:0.85},
   {f:1.2, rad:1.6},
   {f:-1.4, rad:1.65},
   {f:-4.0, rad:1.05},
 ];
+function scaleGeo(k){
+  return {
+    WORLD_W:BASE_GEO.WORLD_W*k, WORLD_H:BASE_GEO.WORLD_H*k,
+    segments:BASE_GEO.segments.map(s=>({x1:s.x1*k,y1:s.y1*k,x2:s.x2*k,y2:s.y2*k,half:s.half*k})),
+    obstacles:BASE_GEO.obstacles.map(o=>({x:o.x*k,y:o.y*k,r:o.r*k,kind:o.kind})),
+    slip:{xMin:BASE_GEO.slip.xMin*k,xMax:BASE_GEO.slip.xMax*k,yMin:BASE_GEO.slip.yMin*k,yMax:BASE_GEO.slip.yMax*k,cy:BASE_GEO.slip.cy*k},
+    spawn:{xMin:BASE_GEO.spawn.xMin*k,xMax:BASE_GEO.spawn.xMax*k,yMin:BASE_GEO.spawn.yMin*k,yMax:BASE_GEO.spawn.yMax*k},
+    hullCircles:BASE_HULL_CIRCLES.map(c=>({f:c.f*k,rad:c.rad*k})),
+  };
+}
+
+// ---------- World & physical constants (set per-vessel by applyVessel) ----------
+let WORLD_W, WORLD_H;
+let IZZ, M_U, M_V;
+let THRUST_FWD_MAX, THRUST_REV_MAX, ENGINE_TAU;
+let SURGE_LIN, SURGE_QUAD, SWAY_LIN, SWAY_QUAD;
+let YAW_DAMP_LIN, YAW_DAMP_QUAD;
+let RUDDER_COEF, PROPWASH_FACTOR, PROPWALK_FWD, PROPWALK_REV;
+let BOW_THRUSTER_MAX, BOW_THRUSTER_ARM, THRUSTER_CUTOFF;
+let STERN_THRUSTER_MAX, STERN_THRUSTER_ARM, HAS_STERN=false;
+let WIND_K_SURGE, WIND_K_SWAY, WIND_COE_OFFSET;
+let SLIP_X_MIN, SLIP_X_MAX, SLIP_Y_MIN, SLIP_Y_MAX, SLIP_CX, SLIP_CY;
+let segments=[], obstacles=[], HULL_CIRCLES=[], SPAWN=BASE_GEO.spawn;
+let HULL_SCALE=1;
+
+const THR_DETENT=0.15;
+const THR_RATE_SLOW=0.42, THR_RATE_FAST=1.8;
+const RUDDER_MAX=35*Math.PI/180;
+const RUDDER_TAU=0.4;
+const DOCK_SPEED_MS=0.18, DOCK_YAW_MAX=0.09, DOCK_HEAD_TOL=22*Math.PI/180, DOCK_HOLD_T=2.2;
+const DAMAGE_THRESH_MS=0.31;
+const MS_TO_KN=1.94384;
 
 // ---------- State ----------
 const boat={
@@ -429,7 +485,7 @@ const boat={
   u:0,v:0,r:0,
   throttleTarget:0, throttleActual:0,
   rudderTarget:0, rudderActual:0,
-  thrusterInput:0,
+  thrusterInput:0, sternThrusterInput:0,
 };
 let attempt=1, attemptStart=0, dockTimer=0, docked=false, hardContacts=0, lastContactTime=-99, lastContactKn=0;
 let best=null;
@@ -462,14 +518,43 @@ function applyDifficulty(){
   else { wind.enabled=true; wind.baseSpeed=6.2; wind.baseDir=rand(0,Math.PI*2); }
 }
 
+function applyVessel(key){
+  const v=VESSELS[key];
+  HAS_STERN=v.hasStern;
+  IZZ=v.IZZ; M_U=v.M_U; M_V=v.M_V;
+  THRUST_FWD_MAX=v.THRUST_FWD_MAX; THRUST_REV_MAX=v.THRUST_REV_MAX; ENGINE_TAU=v.ENGINE_TAU;
+  SURGE_LIN=v.SURGE_LIN; SURGE_QUAD=v.SURGE_QUAD; SWAY_LIN=v.SWAY_LIN; SWAY_QUAD=v.SWAY_QUAD;
+  YAW_DAMP_LIN=v.YAW_DAMP_LIN; YAW_DAMP_QUAD=v.YAW_DAMP_QUAD;
+  RUDDER_COEF=v.RUDDER_COEF; PROPWASH_FACTOR=v.PROPWASH_FACTOR; PROPWALK_FWD=v.PROPWALK_FWD; PROPWALK_REV=v.PROPWALK_REV;
+  BOW_THRUSTER_MAX=v.BOW_MAX; BOW_THRUSTER_ARM=v.BOW_ARM; THRUSTER_CUTOFF=v.THRUSTER_CUTOFF;
+  STERN_THRUSTER_MAX=v.STERN_MAX; STERN_THRUSTER_ARM=v.STERN_ARM;
+  WIND_K_SURGE=v.WIND_K_SURGE; WIND_K_SWAY=v.WIND_K_SWAY; WIND_COE_OFFSET=v.WIND_COE_OFFSET;
+  HULL_SCALE=v.scaleK;
+
+  const geo=scaleGeo(v.scaleK);
+  WORLD_W=geo.WORLD_W; WORLD_H=geo.WORLD_H;
+  segments=geo.segments; obstacles=geo.obstacles; HULL_CIRCLES=geo.hullCircles;
+  SLIP_X_MIN=geo.slip.xMin; SLIP_X_MAX=geo.slip.xMax; SLIP_Y_MIN=geo.slip.yMin; SLIP_Y_MAX=geo.slip.yMax;
+  SLIP_CX=(SLIP_X_MIN+SLIP_X_MAX)/2; SLIP_CY=geo.slip.cy;
+  SPAWN=geo.spawn;
+
+  document.getElementById("vesselSub").innerHTML=v.name+" &middot; single screw &middot; "+(v.hasStern?"bow &amp; stern thruster":"bow thruster");
+  document.getElementById("footerLine").textContent="A "+v.feet+"-foot hull, one propeller, and "+(v.hasStern?"bow and stern thrusters":"a bow thruster")+" \u2014 physics only, no autopilot.";
+  document.getElementById("sternSection").hidden=!v.hasStern;
+
+  fitCanvas();
+  attempt=0;
+  resetAttempt(true);
+}
+
 function resetAttempt(bump){
   if(bump) attempt++;
-  boat.x=rand(21.4,45.4); boat.y=rand(27,35);
+  boat.x=rand(SPAWN.xMin,SPAWN.xMax); boat.y=rand(SPAWN.yMin,SPAWN.yMax);
   boat.heading=norm(rand(-100,100)*Math.PI/180);
   boat.u=0; boat.v=0; boat.r=0;
   boat.throttleTarget=0; boat.throttleActual=0;
   boat.rudderTarget=0; boat.rudderActual=0;
-  boat.thrusterInput=0;
+  boat.thrusterInput=0; boat.sternThrusterInput=0;
   dockTimer=0; docked=false; hardContacts=0; lastContactTime=-99;
   attemptStart=simTime;
   particles=[];
@@ -484,11 +569,12 @@ const keyMap={
   a:"rudL", arrowleft:"rudL",
   d:"rudR", arrowright:"rudR",
   q:"thrusterP", e:"thrusterS",
+  z:"sternP", c:"sternS",
 };
 window.addEventListener("keydown",(e)=>{
   const k=e.key.toLowerCase();
   if(keyMap[k]){ held.add(keyMap[k]); e.preventDefault(); }
-  if(k==="c"){ boat.rudderTarget=0; }
+  if(k===" "){ boat.rudderTarget=0; e.preventDefault(); }
   if(k==="x"){ boat.throttleTarget=0; }
   if(k==="r"){ resetAttempt(true); }
 });
@@ -514,13 +600,15 @@ document.addEventListener("DOMContentLoaded",()=>{
   wireHold(document.getElementById("btnRudR"),"rudR");
   wireHold(document.getElementById("btnThrP"),"thrusterP");
   wireHold(document.getElementById("btnThrS"),"thrusterS");
+  wireHold(document.getElementById("btnSternP"),"sternP");
+  wireHold(document.getElementById("btnSternS"),"sternS");
   document.getElementById("btnThrNeu").addEventListener("click",()=>boat.throttleTarget=0);
   document.getElementById("btnRudC").addEventListener("click",()=>boat.rudderTarget=0);
   document.getElementById("btnRestart").addEventListener("click",()=>resetAttempt(true));
   document.getElementById("difficulty").addEventListener("change",applyDifficulty);
+  document.getElementById("vessel").addEventListener("change",(e)=>applyVessel(e.target.value));
   applyDifficulty();
-  resetAttempt(false);
-  fitCanvas();
+  applyVessel(document.getElementById("vessel").value);
   requestAnimationFrame(loop);
 });
 
@@ -545,6 +633,11 @@ function updateInputs(dt){
   if(held.has("thrusterP")) ti-=1;
   if(held.has("thrusterS")) ti+=1;
   boat.thrusterInput=ti;
+
+  let si=0;
+  if(held.has("sternP")) si-=1;
+  if(held.has("sternS")) si+=1;
+  boat.sternThrusterInput=HAS_STERN?si:0;
 }
 
 // ---------- Physics ----------
@@ -559,14 +652,16 @@ function stepPhysics(dt){
   let Fsurge=thrust - (SURGE_LIN*boat.u + SURGE_QUAD*boat.u*Math.abs(boat.u));
 
   const thrusterEff=Math.max(0,1-speed/THRUSTER_CUTOFF);
-  const Fthr=boat.thrusterInput*THRUSTER_MAX*thrusterEff;
-  let Fsway=Fthr - (SWAY_LIN*boat.v + SWAY_QUAD*boat.v*Math.abs(boat.v));
+  const FthrBow=boat.thrusterInput*BOW_THRUSTER_MAX*thrusterEff;
+  const FthrStern=HAS_STERN ? boat.sternThrusterInput*STERN_THRUSTER_MAX*thrusterEff : 0;
+  let Fsway=FthrBow+FthrStern - (SWAY_LIN*boat.v + SWAY_QUAD*boat.v*Math.abs(boat.v));
 
   let torque=0;
   const washFlow=PROPWASH_FACTOR*Math.max(throttle,0);
   const flow=boat.u+washFlow;
   torque += RUDDER_COEF*boat.rudderActual*flow;
-  torque += Fthr*THRUSTER_ARM;
+  torque += FthrBow*BOW_THRUSTER_ARM;
+  torque += FthrStern*(-STERN_THRUSTER_ARM);
   torque += throttle<0 ? (-throttle)*PROPWALK_REV : -throttle*PROPWALK_FWD;
   torque -= YAW_DAMP_LIN*boat.r + YAW_DAMP_QUAD*boat.r*Math.abs(boat.r);
 
@@ -600,12 +695,17 @@ function stepPhysics(dt){
   boat.y=clamp(boat.y,1.2,WORLD_H-1.2);
 
   if(Math.abs(throttle)>0.12 && Math.random()<0.5){
-    const sx=boat.x-4.6*Math.sin(boat.heading), sy=boat.y+4.6*Math.cos(boat.heading);
+    const sx=boat.x-4.6*HULL_SCALE*Math.sin(boat.heading), sy=boat.y+4.6*HULL_SCALE*Math.cos(boat.heading);
     particles.push({x:sx+rand(-0.3,0.3),y:sy+rand(-0.3,0.3),life:1,dx:rand(-0.4,0.4),dy:rand(-0.4,0.4)});
   }
   if(Math.abs(boat.thrusterInput)>0.1 && Math.random()<0.6){
-    const bx=boat.x+4.3*Math.sin(boat.heading), by=boat.y-4.3*Math.cos(boat.heading);
+    const bx=boat.x+4.3*HULL_SCALE*Math.sin(boat.heading), by=boat.y-4.3*HULL_SCALE*Math.cos(boat.heading);
     const side=boat.thrusterInput>0?-1:1;
+    particles.push({x:bx+side*0.5*Math.cos(boat.heading),y:by+side*0.5*Math.sin(boat.heading),life:0.7,dx:rand(-0.3,0.3),dy:rand(-0.3,0.3)});
+  }
+  if(HAS_STERN && Math.abs(boat.sternThrusterInput)>0.1 && Math.random()<0.6){
+    const bx=boat.x-3.6*HULL_SCALE*Math.sin(boat.heading), by=boat.y+3.6*HULL_SCALE*Math.cos(boat.heading);
+    const side=boat.sternThrusterInput>0?-1:1;
     particles.push({x:bx+side*0.5*Math.cos(boat.heading),y:by+side*0.5*Math.sin(boat.heading),life:0.7,dx:rand(-0.3,0.3),dy:rand(-0.3,0.3)});
   }
   particles.forEach(p=>{p.life-=dt*0.9; p.x+=p.dx*dt; p.y+=p.dy*dt;});
@@ -828,7 +928,7 @@ function drawBoat(){
     [0,-1.05],[1.55,-1.45,"stbdbow"],[1.675,0.5],[1.55,3.2],[1.3,4.7],
     [-1.3,4.7],[-1.55,3.2],[-1.675,0.5],[-1.55,-1.45],[0,-1.05]
   ];
-  function pt(r,f){ return {x:r*s, y:-f*s}; }
+  function pt(r,f){ return {x:r*HULL_SCALE*s, y:-f*HULL_SCALE*s}; }
 
   ctx.beginPath();
   const bowTip=pt(0,4.85);
@@ -847,19 +947,25 @@ function drawBoat(){
   ctx.fillStyle=css("--hull-trim");
   const wh1=pt(-1.05,2.3), wh2=pt(1.05,-0.4);
   ctx.beginPath();
-  ctx.roundRect ? ctx.roundRect(Math.min(wh1.x,wh2.x),Math.min(wh1.y,wh2.y),Math.abs(wh2.x-wh1.x),Math.abs(wh2.y-wh1.y),3*s*0.1) : ctx.rect(Math.min(wh1.x,wh2.x),Math.min(wh1.y,wh2.y),Math.abs(wh2.x-wh1.x),Math.abs(wh2.y-wh1.y));
+  ctx.roundRect ? ctx.roundRect(Math.min(wh1.x,wh2.x),Math.min(wh1.y,wh2.y),Math.abs(wh2.x-wh1.x),Math.abs(wh2.y-wh1.y),3*HULL_SCALE*s*0.1) : ctx.rect(Math.min(wh1.x,wh2.x),Math.min(wh1.y,wh2.y),Math.abs(wh2.x-wh1.x),Math.abs(wh2.y-wh1.y));
   ctx.fill();
   ctx.strokeStyle="rgba(0,0,0,0.2)"; ctx.stroke();
 
   // mast dot
   const mast=pt(0,0.9);
   ctx.fillStyle=css("--ink-dim");
-  ctx.beginPath(); ctx.arc(mast.x,mast.y,1.5*s*0.1+1,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(mast.x,mast.y,1.5*HULL_SCALE*s*0.1+1,0,Math.PI*2); ctx.fill();
 
   // bow thruster tunnel
   const tun=pt(0,3.9);
   ctx.strokeStyle="rgba(0,0,0,0.35)"; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(tun.x-1.15*s,tun.y); ctx.lineTo(tun.x+1.15*s,tun.y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(tun.x-1.15*HULL_SCALE*s,tun.y); ctx.lineTo(tun.x+1.15*HULL_SCALE*s,tun.y); ctx.stroke();
+
+  // stern thruster tunnel
+  if(HAS_STERN){
+    const stun=pt(0,-3.4);
+    ctx.beginPath(); ctx.moveTo(stun.x-1.1*HULL_SCALE*s,stun.y); ctx.lineTo(stun.x+1.1*HULL_SCALE*s,stun.y); ctx.stroke();
+  }
 
   // centerline / rudder indicator at stern
   const sternBase=pt(0,-4.7);
@@ -889,6 +995,10 @@ function updateHud(){
 
   document.getElementById("btnThrP").classList.toggle("on",boat.thrusterInput<-0.05);
   document.getElementById("btnThrS").classList.toggle("on",boat.thrusterInput>0.05);
+  if(HAS_STERN){
+    document.getElementById("btnSternP").classList.toggle("on",boat.sternThrusterInput<-0.05);
+    document.getElementById("btnSternS").classList.toggle("on",boat.sternThrusterInput>0.05);
+  }
 
   if(simTime-lastContactTime<2.2){
     setStatus("Hard contact ("+lastContactKn.toFixed(1)+" kn) \u2014 ease off next time.","warn");
